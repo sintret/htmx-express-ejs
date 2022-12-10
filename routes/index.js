@@ -84,7 +84,6 @@ var dataStore = () => {
 }
 
 var getIds = (params) => {
-  console.log(params)
   if(params['ids']) {
     if(Array.isArray(params['ids'])) {
       return params['ids'].map(x => parseInt(x))
@@ -166,4 +165,95 @@ router.put("/deactivate",  (req, res) => {
 End bulk update
  */
 
+
+/*
+start click to load
+ */
+
+var dataStore = function(){
+  var contactId = 9;
+  function generateContact() {
+    contactId++;
+    var idHash = "";
+    var possible = "ABCDEFG0123456789";
+    for( var i=0; i < 15; i++ ) idHash += possible.charAt(Math.floor(Math.random() * possible.length));
+    return { name: "Agent Smith", email: "void" + contactId + "@null.org", id: idHash }
+  }
+  return {
+    contactsForPage : function(page) {
+      var vals = [];
+      for( var i=0; i < 10; i++ ){
+        vals.push(generateContact());
+      }
+      return vals;
+    }
+  }
+}();
+
+
+// routes
+/*
+init("/demo", function(request, params){
+  var contacts = dataStore.contactsForPage(1)
+  return tableTemplate(contacts)
+});
+
+onGet(/\/contacts.*!/, function(request, params){
+  var page = parseInt(params['page']);
+  var contacts = dataStore.contactsForPage(page)
+  return rowsTemplate(page, contacts);
+});
+*/
+
+// templates
+var tableTemplate = (contacts) => {
+  return `<table class="table table-striped"><thead><tr><th>Name</th><th>Email</th><th>ID</th></tr></thead><tbody>
+                ${rowsTemplate(1, contacts)}
+                </tbody></table>`
+}
+
+var rowsTemplate = (page, contacts) => {
+  var txt = "";
+  for (var i = 0; i < contacts.length; i++) {
+    var c = contacts[i];
+    txt += "<tr><td>" + c.name + "</td><td>" + c.email + "</td><td>" + c.id + "</td></tr>\n";
+  }
+  txt += loadMoreRow(page);
+  return txt;
+}
+
+var loadMoreRow = (page) => {
+  return `<tr id="replaceMe">
+  <td colspan="3">
+    <center>
+      <button class='btn' hx-get="/click-to-load-table/?page=${page + 1}" 
+                       hx-target="#replaceMe" 
+                       hx-swap="outerHTML">
+         Load More Agents... <img class="htmx-indicator" src="/img/bars.svg">
+       </button>
+    </center>
+  </td>
+</tr>`;
+}
+
+router.get('/click-to-load', async(req,res) => {
+  var page = req.params.page || 1;
+  var contacts = dataStore.contactsForPage(page)
+  var renderTable =  tableTemplate(contacts)
+  res.render('layout', {
+    renderTable:renderTable,
+    //renderHead : 'click-to-load.ejs',
+    renderBody : 'click-to-load.ejs',
+  });
+});
+
+router.get('/click-to-load-table', async(req,res) => {
+  var page = parseInt(req.params.page) || 1;
+  var contacts = dataStore.contactsForPage(page)
+  res.send(rowsTemplate(page, contacts))
+})
+
+/*
+end click to load
+ */
 module.exports = router;
